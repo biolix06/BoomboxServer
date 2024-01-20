@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "dotenv": "^16.3.1",
+    "express-rate-limit": "^7.1.5",
+    "multer": "^1.4.5-lts.1",
+    "node-snowflake": "^0.0.1"
+  },
+  "name": "boomboxserver",
+  "version": "0.1.0",
+  "description": "A simple webserver for BoomboxOnlineSync",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "biolix06",
+  "license": "MIT"
+}
