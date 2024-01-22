@@ -14,7 +14,7 @@ const userDatabase = require('./classes/userDatabase');
 const User = require('./classes/user');
 
 const userDB = new userDatabase(path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH), 'users.json');
-const tempDir = path.join(require('os').tmpdir() + './music'); 
+const tempDir = path.join(require('os').tmpdir() + '/music'); 
 const upload = multer({ dest: tempDir });
 
 const app = express();
