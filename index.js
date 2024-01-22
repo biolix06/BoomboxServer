@@ -58,7 +58,7 @@ if (process.env.USE_RATELIMITER == 'true') {
 // This middleware checks if the server is private, and if it is, it only allows GET requests.
 const checkPrivate = (req, res, next) => {
     if(!req) return;
-    if (req.method === "GET") {
+    if (req.method === "GET" && !private) {
         req.auth = false;
         req.user = null;
         return next();
@@ -96,6 +96,10 @@ const tokenAuthMiddleware = (req, res, next) => {
     next();
 };
 app.use(tokenAuthMiddleware);
+
+
+app.use(express.json()); // for parsing application/json
+app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
 /*********************************************************************************************
 *                                          Routes                                            *
@@ -157,7 +161,10 @@ app.post('/user', (req, res) => {
     const newUser = new User(req.body.username, req.body.permissions);
     userDB.data.push(newUser);
     userDB.save();
-    res.json(newUser);
+    res.json({ user: newUser, token: tokenAuth.generateToken({
+        username: newUser.username,
+        id: newUser.id
+    }) });
 });
 
 app.delete('/user/:id', (req, res) => {

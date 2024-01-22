@@ -28,10 +28,10 @@ const PERMISSIONS = {
   hasPermission: function (user, permission) {
     return (user.permissions & permission) === permission;
   },
-};
 
-isHigher = function (user, permission) {
-  return (user.permissions & permission) > user.permissions;
+  isHigher: function (user, permission) {
+    return (user.permissions & permission) > user.permissions;
+  }
 };
   
 module.exports = PERMISSIONS;
