@@ -14,8 +14,20 @@ const userDatabase = require('./classes/userDatabase');
 const User = require('./classes/user');
 
 const userDB = new userDatabase(path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH), 'users.json');
-const tempDir = path.join(require('os').tmpdir() + '/music'); 
-const upload = multer({ dest: tempDir });
+const tempDir = path.join(require('os').tmpdir() + '/music');
+
+const fileExtension = /(mp3|wav|ogg|zip)$/;
+const fileTypes = /(audio\/(mpeg|wav|ogg)|application\/zip)/;
+
+const upload = multer({ 
+    dest: tempDir,
+    fileFilter: (req, file, cb) => {
+        if (!fileTypes.test(file.mimetype) || !fileExtension.test(path.extname(file.originalname))) {
+            return cb(new Error('Only music files are allowed'));
+        }
+        cb(null, true);
+    }
+});
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -110,7 +122,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/songs', (req, res) => {
-    const songsWithoutPath = musicManager.songs.map(song => {
+    const songsWithoutPath = musicManager.getSongs().map(song => {
         const { path, ...songWithoutPath } = song;
         return songWithoutPath;
     });
@@ -118,7 +130,7 @@ app.get('/songs', (req, res) => {
 });
 
 app.get('/song/:hash', (req, res) => {
-    const song = musicManager.songs.find(s => s.hash === req.params.hash);
+    const song = musicManager.getSongs().find(s => s.hash === req.params.hash);
     if (!song) return res.status(404).json({ message: 'Song not found' });
     res.contentType(song.type);
     res.download(song.path);
@@ -137,7 +149,7 @@ app.post('/song', upload.single('song'),(req, res) => {
     if (permissions.hasPermission(user, permissions.SEND) === false) return res.status(403).json({ message: 'Forbidden' });
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     
-    if (!musicManager.addSong(req.file.path)) return res.status(400).json({ message: 'Invalid file' });
+    if (!musicManager.addSong(req.file.path, req.file.originalname, req.file.mimetype)) return res.status(400).json({ message: 'Invalid file' });
 
     res.json({ message: 'Song added' });
 });

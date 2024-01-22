@@ -92,3 +92,5 @@ typings/
 
 # Database files for testing
 db/
+
+music/

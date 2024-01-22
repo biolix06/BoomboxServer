@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const zip = require('adm-zip');
 const os = require('os');
-const temp = os.tmpdir() + '/music/';
+const temp = path.join(os.tmpdir(), '/music/');
 const uuidv4 = require('uuid').v4;
 
 const database = require('./database');
@@ -14,8 +14,8 @@ module.exports = class MusicManager {
 
     static musicDir = process.env.MUSIC_DIR || path.join(__dirname, '../music');
 
-    static addSong(file) {
-        const extension = file.split('.').pop().toLowerCase();
+    static addSong(file, name = null, type = null) {
+        const extension = name.split('.').pop().toLowerCase();
         if (extension === "zip") {
             this.addZip(file);
             return true;
@@ -23,21 +23,23 @@ module.exports = class MusicManager {
 
         if (!fs.existsSync(file)) return false;
 
-        let _type; 
+        let _type = type;
 
-        switch (extension) {
-            case 'mp3':
-                _type = 'audio/mpeg';
-                break;
-            case 'wav':
-                _type = 'audio/wav';
-                break;
-            case 'ogg':
-                _type = 'audio/ogg';
-                break;
-            default:
-                fs.rm(file);
-                return false;
+        if (!_type) {
+            switch (extension) {
+                case 'mp3':
+                    _type = 'audio/mpeg';
+                    break;
+                case 'wav':
+                    _type = 'audio/wav';
+                    break;
+                case 'ogg':
+                    _type = 'audio/ogg';
+                    break;
+                default:
+                    fs.rm(file);
+                    return false;
+            }
         }
 
         let fileHash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -45,15 +47,18 @@ module.exports = class MusicManager {
         if (this.getHashes().includes(fileHash)) return false;
 
         const newFile = {
-            name: file.split('/').pop(),
+            name: name || file.split('\\').pop(),
             path: path.join(this.musicDir, `${fileHash}.${extension}`),
             type: _type,
             hash: fileHash
         };
 
-        fs.renameSync(file, `${newFile.hash}.${extension}`);
-        fs.copyFileSync(file, newFile.path);
-        fs.rmSync(file);
+        const tempFile = path.join(temp,`${newFile.hash}.${extension}`);
+
+        fs.renameSync(file, tempFile);
+        if(!fs.existsSync(this.musicDir)) fs.mkdirSync(this.musicDir, { recursive: true });
+        fs.copyFileSync(tempFile, newFile.path);
+        fs.rmSync(tempFile);
 
         MusicDB.data.push(newFile);
         MusicDB.save();
@@ -62,7 +67,7 @@ module.exports = class MusicManager {
 
     static addZip(file) {
 
-        const tempDir = temp + uuidv4();
+        const tempDir = path.join(temp, `/${uuidv4()}/`);
 
         try {
             const zipFile = new zip(file);
@@ -72,7 +77,7 @@ module.exports = class MusicManager {
         }
 
         fs.readdirSync(tempDir).forEach(file => {
-            this.addSong(path.join(tempDir, file));
+            this.addSong(path.join(tempDir, file), file.split('/').pop());
         });
 
     }
@@ -80,7 +85,7 @@ module.exports = class MusicManager {
     static removeSong(hash) {
         if (!this.getHashes().includes(hash)) return;
 
-        fs.rmSync(MusicDB.data.find(s => s.hash === hash));
+        fs.rmSync(MusicDB.data.find(s => s.hash === hash).path);
         MusicDB.data = MusicDB.data.filter(s => s.hash !== hash);
         MusicDB.save();
     }
