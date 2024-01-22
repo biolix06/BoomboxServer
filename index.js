@@ -3,19 +3,18 @@ const private = process.env.PRIVATE == 'true';
 
 const express = require('express');
 const multer = require('multer');
-const dotenv = require('dotenv').config();
 const { rateLimit } = require('express-rate-limit');
 const snowflake = require('node-snowflake').Snowflake;
+const path = require('path');
 
 const musicManager = require('./classes/musicManager');
 const permissions = require('./classes/permissions');
 const tokenAuth = require('./classes/tokenAuth');
 const userDatabase = require('./classes/userDatabase');
 const User = require('./classes/user');
-const { version } = require('os');
 
-const userDB = new userDatabase('./db/users.json');
-const tempDir = require('os').tmpdir() + '/music'; 
+const userDB = new userDatabase(path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH, 'users.json'));
+const tempDir = path.join(require('os').tmpdir() + './music'); 
 const upload = multer({ dest: tempDir });
 
 const app = express();
@@ -32,24 +31,69 @@ if (userDB.data.length === 0) {
         lastUpdated: Date.now()
     });
 
-    const jwt = tokenAuth.createToken({
+    const jwt = tokenAuth.generateToken({
         id: "0",
         username: 'root',
     });
 
     console.log(`Root token: ${jwt}`);
-    console.log(`WARNING: This token is only shown once, and will not be shown again.\n
-    If you lose this token, you will have to delete the users.json file and restart the server.`);
+    console.log(`WARNING: This token is only shown once, and will not be shown again.\nIf you lose this token, you will have to delete the users.json file and restart the server.`);
 
     userDB.save();
 }
+
+/*********************************************************************************************
+*                                         Middleware                                         *
+**********************************************************************************************/
+
+// This middleware is used to limit the amount of requests per minute.
+if (process.env.USE_RATELIMITER == 'true') {
+    const limiter = rateLimit({
+        windowMs: Number(process.env.RATELIMITER_WINDOW_MS) || 60 * 1000, // 1 minute
+        max: Number(process.env.RATELIMITER_MAX_REQUESTS) || 60 // 60 requests
+    });
+    app.use(limiter);
+}
+
+// This middleware checks if the server is private, and if it is, it only allows GET requests.
+const checkPrivate = (req, res, next) => {
+    if(!req) return;
+    if (req.method === "GET") return next();
+
+    if (!private) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+};
+app.use(checkPrivate);
+
+// This middleware performs token authentication.
+const tokenAuthMiddleware = (req, res, next) => {
+
+    if(!req) return;
+
+    const token = req.get("authorization");
+
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const user = tokenAuth.verifyToken(token);
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    req.user = user;
+
+    next();
+};
+app.use(tokenAuthMiddleware);
 
 /*********************************************************************************************
 *                                          Routes                                            *
 **********************************************************************************************/
 
 app.get('/', (req, res) => {
-    res.json({ private : private, songs : musicManager.songs.length, version : version });
+    res.json({ private : private, songs : musicManager.getSongsNumber(), version : version });
 });
 
 app.get('/songs', (req, res) => {
@@ -118,49 +162,12 @@ app.delete('/user/:id', (req, res) => {
     res.json({ message: 'User deleted' });
 });
 
-/*********************************************************************************************
-*                                        Middlewares                                         *
-**********************************************************************************************/
-
-// This middleware is used to limit the amount of requests per minute.
-if (process.env.USE_RATELIMITER == 'true') {
-    const limiter = rateLimit({
-        windowMs: Number(process.env.RATELIMITER_WINDOW_MS) || 60 * 1000, // 1 minute
-        max: Number(process.env.RATELIMITER_MAX_REQUESTS) || 60 // 60 requests
-    });
-    app.use(limiter);
-}
-
-// This middleware checks if the server is private, and if it is, it only allows GET requests.
-const checkPrivate = (req, res, next) => {
-    if (req.method === "GET") return next();
-
-    if (!private) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-};
-app.use(checkPrivate);
-
-// This middleware performs token authentication.
-const tokenAuthMiddleware = (req, res, next) => {
-
-    const token = req.headers.authorization;
-
-    if (!token) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    const user = tokenAuth.verifyToken(token);
-    if (!user) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    req.user = user;
-
-    next();
-};
-app.use(tokenAuthMiddleware);
+// This middleware is for handling errors.
+app.use((err, req, res, next) => {
+    console.error(err.stack)
+    res.status(500).json({message: 'Internal server error'});
+  })
 
 app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`);
+    console.log(`BoomboxServer listening at http://localhost:${port}`);
 });

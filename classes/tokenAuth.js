@@ -7,6 +7,9 @@ module.exports = class TokenAuth {
     }
     
     static verifyToken(token) {
-        return jwt.verify(token, process.env.JWT_SECRET);
+        return jwt.verify(token, process.env.JWT_SECRET, (err, data) => {
+            if (err) return false;
+            return data;
+        });
     }
 };

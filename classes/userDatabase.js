@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 const database = require('./database');
 const User = require('./user');
 const PERMISSIONS = require('./permissions');

@@ -1,14 +1,13 @@
 const fs = require('fs');
-path = require('path');
-const crypto = require('crypto');
 const path = require('path');
+const crypto = require('crypto');
 const zip = require('adm-zip');
 const os = require('os');
 const temp = os.tmpdir() + '/music/';
-const { v4: uuidv4 } = require('uuid');
+const uuidv4 = require('uuid').v4;
 
 const database = require('./database');
-const MusicDB = new database(path.join(__dirname, '../db/music.json'));
+const MusicDB = new database(path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH, 'musics.json'));
 
 module.exports = class MusicManager {
 
@@ -104,5 +103,9 @@ module.exports = class MusicManager {
 
     static getPath(hash) {
         return MusicDB.data.find(s => s.hash === hash).path;
+    }
+
+    static getSongsNumber() {
+        return MusicDB.data.length;
     }
 }
