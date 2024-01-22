@@ -13,7 +13,7 @@ const tokenAuth = require('./classes/tokenAuth');
 const userDatabase = require('./classes/userDatabase');
 const User = require('./classes/user');
 
-const userDB = new userDatabase(path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH, 'users.json'));
+const userDB = new userDatabase(path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH), 'users.json');
 const tempDir = path.join(require('os').tmpdir() + './music'); 
 const upload = multer({ dest: tempDir });
 
@@ -58,11 +58,18 @@ if (process.env.USE_RATELIMITER == 'true') {
 // This middleware checks if the server is private, and if it is, it only allows GET requests.
 const checkPrivate = (req, res, next) => {
     if(!req) return;
-    if (req.method === "GET") return next();
+    if (req.method === "GET") {
+        req.auth = false;
+        req.user = null;
+        return next();
+    }
 
     if (!private) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
+
+    req.auth = true;
+    next();
 };
 app.use(checkPrivate);
 
@@ -70,6 +77,8 @@ app.use(checkPrivate);
 const tokenAuthMiddleware = (req, res, next) => {
 
     if(!req) return;
+
+    if (!req.auth) return next();
 
     const token = req.get("authorization");
 
@@ -130,6 +139,7 @@ app.post('/song', upload.single('song'),(req, res) => {
 });
 
 app.get('/users', (req, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
     const user = userDB.data.find(u => u.id === req.user.id) || { permissions: 0 };
     if (permissions.hasPermission(user, permissions.ADDUSER) === false) return res.status(403).json({ message: 'Forbidden' });
     res.json(userDB.data);

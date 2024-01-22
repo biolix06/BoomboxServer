@@ -7,7 +7,8 @@ const temp = os.tmpdir() + '/music/';
 const uuidv4 = require('uuid').v4;
 
 const database = require('./database');
-const MusicDB = new database(path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH, 'musics.json'));
+const dbPath = path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH);
+const MusicDB = new database(dbPath, 'musics.json');
 
 module.exports = class MusicManager {
 

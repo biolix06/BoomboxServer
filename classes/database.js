@@ -1,14 +1,18 @@
 const fs = require('fs');
+const path = require('path');
 
 module.exports = class Database {
     
-    constructor(path) {
-        this.path = path;
+    constructor(dir, file) {
+        this.dir = dir;
+        this.file = file;
+        this.path = path.join(dir, file);
         this.data = this.read();
     }
 
     read() {
         if (!fs.existsSync(this.path)) {
+            fs.mkdirSync(this.dir, { recursive: true });
             fs.writeFileSync(this.path, '[]');
             return [];
         }
@@ -18,7 +22,7 @@ module.exports = class Database {
 
     save(data = this.data) {
         if (!fs.existsSync(this.path)) {
-            fs.mkdirSync(this.path);
+            fs.mkdirSync(this.dir, { recursive: true });
         }
         fs.writeFileSync(this.path, JSON.stringify(data));
     }

@@ -6,12 +6,13 @@ const PERMISSIONS = require('./permissions');
 
 module.exports = class UserDatabase extends database {
 
-    constructor(path) {
-        super(path);
+    constructor(dir, file) {
+        super(dir, file);
     }
 
     read() {
         if (!fs.existsSync(this.path)) {
+            fs.mkdirSync(this.dir, { recursive: true });
             fs.writeFileSync(this.path, '[]');
             return [];
         }
