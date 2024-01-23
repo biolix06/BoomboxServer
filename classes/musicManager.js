@@ -114,4 +114,16 @@ module.exports = class MusicManager {
     static getSongsNumber() {
         return MusicDB.data.length;
     }
+
+    static init() {
+        fs.readdir(this.musicDir, (err, files) => {
+            if (err) throw err;
+            files.forEach((file) => {
+                const fileSplited = file.split('.'); 
+                const hash = fileSplited.splice(0, fileSplited.length - 1);
+                if (this.getHashes.contains(hash)) return;
+                this.addSong(path.join(this.musicDir, hash));
+            })
+        })
+    }
 }
