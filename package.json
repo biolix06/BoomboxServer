@@ -8,7 +8,7 @@
     "uuid": "^9.0.1"
   },
   "name": "boomboxserver",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A simple webserver for BoomboxOnlineSync",
   "main": "index.js",
   "scripts": {

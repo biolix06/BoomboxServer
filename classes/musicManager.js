@@ -37,7 +37,7 @@ module.exports = class MusicManager {
                     _type = 'audio/ogg';
                     break;
                 default:
-                    fs.rm(file);
+                    fs.rmSync(file);
                     return false;
             }
         }

@@ -13,22 +13,25 @@ const tokenAuth = require('./classes/tokenAuth');
 const userDatabase = require('./classes/userDatabase');
 const User = require('./classes/user');
 
+// Intialize user database
 const userDB = new userDatabase(path.isAbsolute(process.env.DB_PATH) ? process.env.DB_PATH : path.join(__dirname, "..", process.env.DB_PATH), 'users.json');
 const tempDir = path.join(require('os').tmpdir() + '/music');
 
-const fileExtension = /(mp3|wav|ogg|zip)$/;
+const fileExtensions = /(mp3|wav|ogg|zip)$/;
 const fileTypes = /(audio\/(mpeg|wav|ogg)|application\/zip)/;
 
-const upload = multer({ 
+// Initialize multer for file uploads with file type and extension validation
+const upload = multer({
     dest: tempDir,
     fileFilter: (req, file, cb) => {
-        if (!fileTypes.test(file.mimetype) || !fileExtension.test(path.extname(file.originalname))) {
+        if (!fileTypes.test(file.mimetype) || !fileExtensions.test(path.extname(file.originalname))) {
             return cb(new Error('Only music files are allowed'));
         }
         cb(null, true);
     }
 });
 
+// Initialize express
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 
@@ -198,8 +201,9 @@ app.delete('/user/:id', (req, res) => {
 app.use((err, req, res, next) => {
     console.error(err.stack)
     res.status(500).json({message: 'Internal server error'});
-  })
+  });
 
+// Start the server
 app.listen(port, () => {
-    console.log(`BoomboxServer listening at http://localhost:${port}`);
+    console.log(`BoomboxServer v${version} listening at http://localhost:${port}`);
 });
