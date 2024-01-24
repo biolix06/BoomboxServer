@@ -14,7 +14,7 @@ module.exports = class MusicManager {
 
     static musicDir = process.env.MUSIC_DIR || path.join(__dirname, '../music');
 
-    static addSong(file, name = null, type = null) {
+    static addSong(file, name, type = null) {
         const extension = name.split('.').pop().toLowerCase();
         if (extension === "zip") {
             this.addZip(file);
