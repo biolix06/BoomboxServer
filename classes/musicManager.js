@@ -121,7 +121,7 @@ module.exports = class MusicManager {
             files.forEach((file) => {
                 const fileSplited = file.split('.'); 
                 const hash = fileSplited.splice(0, fileSplited.length - 1);
-                if (this.getHashes.contains(hash)) return;
+                if (this.getHashes().includes(hash)) return;
                 this.addSong(path.join(this.musicDir, hash));
             })
         })
