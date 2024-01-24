@@ -14,8 +14,8 @@ module.exports = class MusicManager {
 
     static musicDir = process.env.MUSIC_DIR || path.join(__dirname, '../music');
 
-    static addSong(file, name, type = null) {
-        const extension = name.split('.').pop().toLowerCase();
+    static addSong(file, type = null) {
+        const extension = file.split('.').pop().toLowerCase();
         if (extension === "zip") {
             this.addZip(file);
             return true;
@@ -47,18 +47,18 @@ module.exports = class MusicManager {
         if (this.getHashes().includes(fileHash)) return false;
 
         const newFile = {
-            name: name || file.split('\\').pop(),
+            name: path.basename(file),
             path: path.join(this.musicDir, `${fileHash}.${extension}`),
             type: _type,
             hash: fileHash
         };
 
-        const tempFile = path.join(temp,`${newFile.hash}.${extension}`);
+        const tempFile = path.join(path.dirname(file),`${newFile.hash}.${extension}`);
 
         fs.renameSync(file, tempFile);
         if(!fs.existsSync(this.musicDir)) fs.mkdirSync(this.musicDir, { recursive: true });
         fs.copyFileSync(tempFile, newFile.path);
-        fs.rmSync(tempFile);
+        if (tempFile != newFile.path) fs.rmSync(tempFile);
 
         MusicDB.data.push(newFile);
         MusicDB.save();
@@ -76,8 +76,8 @@ module.exports = class MusicManager {
             console.log(err);
         }
 
-        fs.readdirSync(tempDir).forEach(file => {
-            this.addSong(path.join(tempDir, file), file.split('/').pop());
+        fs.readdirSync(tempDir, {recursive : true}).forEach(file => {
+            this.addSong(path.join(tempDir, file));
         });
 
     }
@@ -116,13 +116,14 @@ module.exports = class MusicManager {
     }
 
     static init() {
+        if (!fs.existsSync(this.musicDir)) fs.mkdirSync(this.musicDir, { recursive: true });
+        MusicDB.data.forEach(song => {
+            if (!fs.existsSync(song.path)) MusicDB.data = MusicDB.data.filter(s => s.hash !== song.hash);
+        });
         fs.readdir(this.musicDir, (err, files) => {
             if (err) throw err;
             files.forEach((file) => {
-                const fileSplited = file.split('.'); 
-                const hash = fileSplited.shift();
-                if (this.getHashes().includes(hash)) return;
-                this.addSong(path.join(this.musicDir, file), file);
+                if (!this.getHashes().includes(file.split('.').shift())) this.addSong(path.join(this.musicDir,file));
             })
         })
     }
